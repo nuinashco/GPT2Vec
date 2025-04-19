@@ -1,0 +1,4 @@
+
+
+class ForMNTPLoss:
+    pass

@@ -1,4 +1,10 @@
 
+"""
+TODO:
+- PartialGradNorm: A callback that computes the gradient norm of a model's parameters.
+- Simetricity and Bidirectionality: A callback that checks if the attention is symmetric and bidirectional.
+"""
+
 
 class PartialGradNorm:
     """

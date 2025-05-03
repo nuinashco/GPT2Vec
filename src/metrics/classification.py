@@ -25,5 +25,5 @@ class NerMetrics:
             "precision": results["overall_precision"],
             "recall": results["overall_recall"],
             "f1": results["overall_f1"],
-            "accuracy": results["overall_accuracy"],
+            "accuracy": results["overall_accuracy"]
         }

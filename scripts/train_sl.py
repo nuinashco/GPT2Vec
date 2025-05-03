@@ -28,6 +28,7 @@ def main(cfg: DictConfig):
     )
     tokenizer.add_eos_token = True  # We'll add <eos> at the end
     tokenizer.padding_side = "right"
+    tokenizer.add_prefix_space = True
 
     dataset = KEY2DATASET[cfg.data.dataset_type](
         tokenizer=tokenizer,
@@ -60,7 +61,7 @@ def main(cfg: DictConfig):
 
     compute_metrics = KEY2CLF_METRIC[cfg.train.metric](
         label2id=dataset.label2id
-    )
+    ).compute_metrics
     trainer = Trainer(
         model=model, 
         args=train_args, 
@@ -71,14 +72,16 @@ def main(cfg: DictConfig):
         tokenizer=tokenizer,
     )
 
-    # wandb_run = wandb.init(
-    #     **cfg.wandb,
-    #     config=cfg
-    # )
+
+
+    wandb_run = wandb.init(
+        **cfg.wandb,
+        config={'hydra': OmegaConf.to_container(cfg, resolve=True)}
+    )
 
     trainer.train()
 
-    # wandb_run.finish()
+    wandb_run.finish()
 
 if __name__ == "__main__":
     main()

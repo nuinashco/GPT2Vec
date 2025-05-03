@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "3.10.7"
+python = "3.10.12"
 numpy = "1.26.4"
 pandas = "2.2.3"
 matplotlib = "3.7.5"
@@ -19,7 +19,6 @@ transformers = "4.51.3"
 sentencepiece = "0.2.0"
 datasets = "3.3.1"
 peft = "0.14.0"
-bitsandbytes = "0.41.1"
 tiktoken = "0.9.0"
 ipykernel = "5.5.6"
 kaggle = "1.6.17"
@@ -28,6 +27,7 @@ omegaconf = "2.3.0"
 wandb = "0.19.10"
 evaluate = "^0.4.3"
 seqeval = "^1.2.2"
+bitsandbytes = "^0.45.5"
 
 [build-system]
 requires = ["poetry-core"]

@@ -4,3 +4,4 @@ data/
 .venv/
 .idea/
 wandb/
+__pycache__/

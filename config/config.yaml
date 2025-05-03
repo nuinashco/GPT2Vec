@@ -5,9 +5,9 @@ hydra:
 
 defaults:
   - _self_
-  - data: data_sl
-  - model: model_sl
-  - train: train_sl
+  - data: data
+  - model: model
+  - train: train
 
 
 seed: 42

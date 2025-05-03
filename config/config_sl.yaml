@@ -1,0 +1,21 @@
+hydra:
+  run:
+    dir: "../hydra_logs"
+  output_subdir: ${now:%Y-%m-%d_%H-%M-%S}
+
+defaults:
+  - _self_
+  - data: data_sl
+  - model: model_sl
+  - train: train_sl
+
+
+seed: 42
+experiment_name: debug-run
+
+
+wandb:
+  project: thesis-sequence-labeling
+  entity: ivan-havlytskyiz
+  name: ${experiment_name}
+#  log_model: all

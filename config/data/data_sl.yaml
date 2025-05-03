@@ -1,0 +1,4 @@
+dataset_type: ner_uk
+
+dataset_params:
+  dataset_name: Goader/ner-uk-2.0

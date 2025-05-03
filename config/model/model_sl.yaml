@@ -1,0 +1,12 @@
+pretrained_model_name_or_path: microsoft/mdeberta-v3-base
+
+use_bfloat16: False
+
+use_lora: True
+lora:
+  r: 16
+  lora_alpha: 32
+  bias: none
+  lora_dropout: 0.05
+#  target_modules: ['o', 'v', "q", "k", "wi_0"]
+  task_type: TOKEN_CLS

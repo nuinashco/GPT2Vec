@@ -31,6 +31,6 @@ def ForMaskedNTPLoss(
 
 
 LOSS_MAPPING = {
-    "ForMaskedLM": ForMaskedLMLoss,
-    "ForMaskedNTPLoss": ForMaskedNTPLoss
+    "mlm": ForMaskedLMLoss,
+    "mntp": ForMaskedNTPLoss
 }

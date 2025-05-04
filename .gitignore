@@ -1,9 +1,11 @@
 .venv/
 .DS_Store
+.ipynb_checkpoints
 __pycache__/
 
 .idea/
 wandb/
+checkpoints/
 
 data/ner-uk-2/
 !config/data/

@@ -15,7 +15,7 @@ experiment_name: benjamin-baseline-test
 
 
 wandb:
-  project: thesis-sequence-labeling
-  entity: ivan-havlytskyiz
+  project: bidirectional-decoder
+  entity: havlytskyi-thesis
   name: ${experiment_name}
 #  log_model: all

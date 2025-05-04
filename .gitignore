@@ -1,7 +1,9 @@
-.python-version
-data/
-!config/data/
 .venv/
+.DS_Store
+__pycache__/
+
 .idea/
 wandb/
-__pycache__/
+
+# data/
+!config/data/

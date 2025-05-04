@@ -5,8 +5,6 @@ import wandb
 from src.utils.other import set_seeds
 
 import torch
-from src.datasets import KEY2DATASET
-from src.metrics import KEY2CLF_METRIC
 from transformers import (
     AutoModelForTokenClassification,
     AutoTokenizer,

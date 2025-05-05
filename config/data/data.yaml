@@ -1,4 +1,6 @@
-dataset_type: ner_uk
+dataset:
+  path: Goader/ner-uk-2.0
 
-dataset_params:
-  dataset_name: Goader/ner-uk-2.0
+tokenize:
+  max_seq_length: 512
+  truncation: True

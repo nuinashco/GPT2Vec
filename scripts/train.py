@@ -11,35 +11,37 @@ from transformers import (
     DataCollatorForTokenClassification,
     Trainer,
     TrainingArguments,
+    BitsAndBytesConfig
 )
 from peft import get_peft_model, LoraConfig, TaskType
+from src.models import MODELS_MAPPING
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config_sl")
 def main(cfg: DictConfig):
     set_seeds(cfg.seed)
 
-    torch_dtype = torch.bfloat16 if cfg.model.use_bfloat16 else torch.float16
+    model_class = MODELS_MAPPING.get(
+        cfg.model.model_family, {}
+        ).get(cfg.model.task)
+    assert model_class, f"Model family {cfg.model.model_family} and task {cfg.model.task} not supported."
 
     tokenizer = AutoTokenizer.from_pretrained(
         cfg.model.pretrained_model_name_or_path
     )
-    tokenizer.add_eos_token = True  # We'll add <eos> at the end
-    tokenizer.padding_side = "right"
-    tokenizer.add_prefix_space = True
 
-    dataset = KEY2DATASET[cfg.data.dataset_type](
-        tokenizer=tokenizer,
-        splits=('train', 'validation'),
-        **cfg.data.dataset_params
+    if cfg.model.quantization:
+        bnb_4bit_compute_dtype = cfg.model.quantization.pop('bnb_4bit_compute_dtype')
+        quant_config = BitsAndBytesConfig(
+            **cfg.model.quantization,
+            bnb_4bit_compute_dtype=getattr(torch, bnb_4bit_compute_dtype),
         )
-    data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
 
-    model = AutoModelForTokenClassification.from_pretrained(
-        cfg.model.pretrained_model_name_or_path,
-        id2label=dataset.id2label,
-        label2id=dataset.label2id,
-        torch_dtype=torch_dtype
+    torch_dtype = cfg.model.model.pop('torch_dtype')
+    model = model_class.from_pretrained(
+        **cfg.model.model,
+        torch_dtype=getattr(torch, torch_dtype),
+        quantization_config=quant_config if cfg.model.quantization else None,
     )
 
     if cfg.model.use_lora:
@@ -51,15 +53,14 @@ def main(cfg: DictConfig):
         model.print_trainable_parameters()
 
     train_args = TrainingArguments(
-        output_dir=f'./model_checkpoints_{cfg.wandb.name}',
-        logging_dir=f'./model_logs_{cfg.wandb.name}',
+        output_dir=f'./checkpoints/{cfg.wandb.name}',
+        logging_dir=f'./logs/{cfg.wandb.name}',
         bf16=cfg.model.use_bfloat16,
         **cfg.train.training_args
     )
 
-    compute_metrics = KEY2CLF_METRIC[cfg.train.metric](
-        label2id=dataset.label2id
-    ).compute_metrics
+    # DATASET
+    # CALLBACKS
     trainer = Trainer(
         model=model, 
         args=train_args, 
@@ -69,7 +70,6 @@ def main(cfg: DictConfig):
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
     )
-
 
 
     wandb_run = wandb.init(

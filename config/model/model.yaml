@@ -1,13 +1,27 @@
-pretrained_model_name_or_path: benjamin/roberta-large-wechsel-ukrainian
-# pretrained_model_name_or_path: microsoft/mdeberta-v3-base
+model_family: llama
+task: mlm # mlm | mntp
+
+
+model:
+  pretrained_model_name_or_path: meta-llama/Llama-3.2-3B
+  torch_dtype: float16
+
 
 use_bfloat16: False
 
-use_lora: False
-# lora:
-#   r: 16
-#   lora_alpha: 32
-#   bias: none
-#   lora_dropout: 0.05
-# #  target_modules: ['o', 'v', "q", "k", "wi_0"]
-#   task_type: TOKEN_CLS
+
+quantization:
+  load_in_4bit: True,
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: False
+  bnb_4bit_compute_dtype: float16
+
+
+lora:
+  r: 64  # the dimension of the low-rank matrices
+  lora_alpha: 128 # scaling factor for LoRA activations vs pre-trained weight activations
+  lora_dropout: 0.05 
+  bias: none
+  inference_mode: False
+  task_type: CAUSAL_LM
+  target_modules: ['o_proj', 'v_proj', "q_proj", "k_proj", "gate_proj", "down_proj", "up_proj"]

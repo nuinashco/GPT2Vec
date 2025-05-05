@@ -1,3 +1,5 @@
+mask_token: "<mask>"
+
 training_args:
     learning_rate: 1e-5
     weight_decay: 0.01
@@ -18,5 +20,3 @@ training_args:
     metric_for_best_model: eval_f1
     greater_is_better: True
     load_best_model_at_end: True
-
-metric: seqeval

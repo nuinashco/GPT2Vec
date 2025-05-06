@@ -1,22 +1,20 @@
+task: mlm # mlm | mntp
 mask_token: "<mask>"
 
+
 training_args:
-    learning_rate: 1e-5
+    learning_rate: 2e-4
     weight_decay: 0.01
     lr_scheduler_type: cosine
     warmup_ratio: 0.0
-    num_train_epochs: 50
-    per_device_train_batch_size: 32
-    per_device_eval_batch_size: 32
-    # gradient_accumulation_steps: 1
+    num_train_epochs: 1
+    per_device_train_batch_size: 2
+    gradient_accumulation_steps: 8
+    do_train: True
+    do_eval: False
+    bf16: False
     report_to: wandb
     optim: adamw_8bit
-    eval_strategy: epoch
-    save_strategy: ste
-    # eval_steps: 200
-    logging_steps: 100
-    # save_steps: 200
-    save_total_limit: 3
-    metric_for_best_model: eval_f1
-    greater_is_better: True
-    load_best_model_at_end: True
+    save_strategy: steps
+    logging_steps: 20
+    save_steps: 200

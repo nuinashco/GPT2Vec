@@ -11,7 +11,7 @@ defaults:
 
 
 seed: 42
-experiment_name: benjamin-baseline-test
+experiment_name: llama-3.2-3B-mlm
 
 
 wandb:

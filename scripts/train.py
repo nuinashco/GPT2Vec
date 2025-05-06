@@ -15,7 +15,7 @@ from transformers import (
 from peft import get_peft_model, LoraConfig, TaskType
 from datasets import load_dataset
 from src.models import MODELS_MAPPING
-
+from src.callbacks.partial_grad_norm import PartialGradNormCallback
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg: DictConfig):
@@ -71,17 +71,20 @@ def main(cfg: DictConfig):
         batched=True, num_proc=10
         ).remove_columns(["text"])
     
-    # tokenizer.mask_token = cfg.train.mask_token
-    if not tokenizer.mask_token:
-        tokenizer.add_tokens(cfg.train.mask_token, special_tokens=True)
-        tokenizer.mask_token = cfg.train.mask_token
 
+    tokenizer.mask_token = cfg.train.mask_token
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=True, mlm_probability=0.2
     )
 
 
     # TODO: CALLBACKS
+    # gradnorm_cb = PartialGradNormCallback(
+    #     model,
+    #     target_modules=["lm_head"],  # LoRA‑style patterns
+    #     # target_layers=range(0, 6),              # layers 0‑5 inclusive
+    #     log_key="=grad_norm",
+    # )
 
     wandb_run = wandb.init(
         **cfg.wandb,
@@ -92,7 +95,8 @@ def main(cfg: DictConfig):
         model=model,
         args=train_args,
         data_collator=data_collator,
-        train_dataset=tokenized_dataset
+        train_dataset=tokenized_dataset,
+        # callbacks=[gradnorm_cb]
     )
 
     trainer.train()

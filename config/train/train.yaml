@@ -1,5 +1,7 @@
-task: mlm # mlm | mntp
-mask_token: "<mask>"
+task: mntp # mlm | mntp
+
+# We should use some existing token
+mask_token: "_"
 
 
 training_args:
@@ -16,5 +18,5 @@ training_args:
     report_to: wandb
     optim: adamw_8bit
     save_strategy: steps
-    logging_steps: 20
+    logging_steps: 10
     save_steps: 200

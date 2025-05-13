@@ -8,7 +8,7 @@ class NerMetrics:
 
     def compute_metrics(self, p):
         predictions, labels = p
-        predictions = np.argmax(predictions, axis=2)
+        predictions = np.argmax(predictions[0], axis=2)
 
         # Remove ignored index (special tokens)
         true_predictions = [

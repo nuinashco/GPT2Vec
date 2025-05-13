@@ -1,13 +1,9 @@
-"""
-TODO:
-- Clean class to calculate the attention geometry scores.
-- LoRA handling (with and without LoRA weights merge).
-
-"""
+import torch
+import functools
 
 from abc import ABC, abstractmethod
-from typing import Iterable, List
-import torch, functools
+from typing import Literal, Dict, Any, Optional, List, Iterable
+
 
 
 def rgetattr(obj, attr, *args):
@@ -17,10 +13,23 @@ def rgetattr(obj, attr, *args):
 
 
 class AttentionExtractor:
-    def __init__(self, model, q_path: str, k_path: str, attention_type: str | None = None):
+    def __init__(
+        self,
+        model,
+        q_path: str,
+        k_path: str,
+        attention_type: Optional[Literal["grouped"]] = None,
+        is_lora: bool = False,
+        merge_lora: bool = False,
+        adapter_name: Optional[str] = None,
+    ):
         self.model = model
         self.q_path, self.k_path = q_path, k_path
         self.attention_type = attention_type
+
+        self.is_lora = is_lora
+        self.merge_lora = merge_lora
+        self.adapter_name = adapter_name  # default: merge *all* loaded adapters
 
         self.layer_count = model.config.num_hidden_layers
         self.d  = model.config.hidden_size
@@ -32,21 +41,78 @@ class AttentionExtractor:
 
 
     def matrix(self, layer_idx: int) -> torch.Tensor:
+        """Return Q·Kᵀ for the chosen layer as a *detached* tensor."""
         Wq = self._raw(self.q_path, layer_idx).T.detach()
         Wk = self._raw(self.k_path, layer_idx).T.detach()
 
         if self.attention_type == "grouped":
+            # "Grouped" attention (Mistral-like) -> reshape keys before mm
             Wk = Wk.view(Wk.shape[0], self.dh, Wk.shape[1] // self.dh)
             rep = (Wq.shape[0] // self.dh) // Wk.shape[-1]
             Wk = Wk.repeat_interleave(rep, 0).view(Wq.shape[0], Wq.shape[0])
 
         return Wq @ Wk.T
 
+
     def _raw(self, path: str, idx: int) -> torch.Tensor:
+        """
+        path: str
+            Path to the matrix in the model, e.g. "model.layers[layer_idx].self_attn.q_proj".
+            The [layer_idx] part will be replaced with the actual layer index.
+        """
+
         layers_path, matrix_path = path.split("[layer_idx].")
         layer_module = rgetattr(self.model, layers_path)[idx]
-        return rgetattr(layer_module, matrix_path)
+        proj_module = rgetattr(layer_module, matrix_path)
 
+        if not self.is_lora:
+            assert not self._is_lora_layer(proj_module), \
+                f"Module {proj_module} is a LoRA layer, but is_lora is False."
+
+            return proj_module.weight
+
+        else:
+            delta_lora = self._delta_lora_weight(proj_module)
+
+            if self.merge_lora:
+                return proj_module.base_layer.weight + delta_lora
+            else:
+                return delta_lora
+
+
+    @staticmethod
+    def _is_lora_layer(module) -> bool:
+        try:
+            from peft.tuners.lora import LoraLayer
+            return isinstance(module, LoraLayer)
+        except ImportError:
+            return hasattr(module, "lora_A") and hasattr(module, "lora_B")
+
+
+    def _delta_lora_weight(self, module) -> torch.Tensor:
+        if not self._is_lora_layer(module):
+            return torch.zeros_like(module.weight)
+
+        delta = torch.zeros_like(module.base_layer.weight)
+
+        adapters = (
+            [self.adapter_name] if self.adapter_name is not None
+            else module.lora_A.keys()
+        )
+        for name in adapters:
+            A = module.lora_A[name].weight # [r, in]
+            B = module.lora_B[name].weight # [out, r]
+            r = A.size(0)
+            alpha = (
+                module.lora_alpha[name]
+                if isinstance(module.lora_alpha, dict)
+                else module.lora_alpha
+            )
+            delta += (B @ A) * (alpha / r)
+
+        return delta
+
+        
 
 class AttentionScorer(ABC):
     def __init__(self, extractor: AttentionExtractor):

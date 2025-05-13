@@ -135,7 +135,13 @@ class AttentionScorer(ABC):
 class SymmetryScore(AttentionScorer):
     def _score(self, A: torch.Tensor) -> float:
         sym = 0.5 * (A + A.T)
-        score = (sym ** 2).sum() / (A ** 2).sum()
+
+        # somehow we should handle the case when A is zero
+        denominator = (A ** 2).sum()
+        if denominator == 0:
+            return 1.0
+            
+        score = (sym ** 2).sum() / denominator
 
         # like in paper
         score = 2 * score - 1

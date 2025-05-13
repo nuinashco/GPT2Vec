@@ -91,7 +91,7 @@ class AttentionExtractor:
 
     def _delta_lora_weight(self, module) -> torch.Tensor:
         if not self._is_lora_layer(module):
-            return torch.zeros_like(module.weight)
+            return torch.zeros_like(module.base_layer.weight)
 
         delta = torch.zeros_like(module.base_layer.weight)
 

@@ -16,6 +16,7 @@ from peft import get_peft_model, LoraConfig, TaskType
 from datasets import load_dataset
 from src.models import MODELS_MAPPING
 from src.callbacks.partial_grad_norm import PartialGradNormCallback
+from src.callbacks.directionality import AttentionGeometryCallback
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def main(cfg: DictConfig):
@@ -32,21 +33,24 @@ def main(cfg: DictConfig):
     if not tokenizer.pad_token:
         tokenizer.pad_token = tokenizer.eos_token
 
-    if cfg.model.quantization:
+    if hasattr(cfg.model, "quantization"):
         quant_cfg = OmegaConf.to_container(cfg.model.quantization, resolve=True)
         quant_cfg["bnb_4bit_compute_dtype"] = getattr(torch, quant_cfg["bnb_4bit_compute_dtype"])
         quant_config = BitsAndBytesConfig(
             **quant_cfg
         )
+    else:
+        quant_config = None
+
 
     model_cfg = OmegaConf.to_container(cfg.model.model, resolve=True)
     model_cfg['torch_dtype'] = getattr(torch, model_cfg['torch_dtype'])
     model = model_class.from_pretrained(
         **model_cfg,
-        quantization_config=quant_config if cfg.model.quantization else None,
+        quantization_config=quant_config,
     )
 
-    if cfg.model.lora:
+    if hasattr(cfg.model, "lora"):
         lora_cfg = OmegaConf.to_container(cfg.model.lora, resolve=True)
         lora_config = LoraConfig(**lora_cfg)
         model = get_peft_model(model, lora_config)
@@ -79,6 +83,18 @@ def main(cfg: DictConfig):
 
 
     # TODO: CALLBACKS
+
+    callbacks = [
+        AttentionGeometryCallback(
+            q_path="base_model.model.model.layers[layer_idx].self_attn.q_proj",
+            k_path="base_model.model.model.layers[layer_idx].self_attn.k_proj",
+            attention_type="grouped",     # or None
+            is_lora=True,                 # if using PEFT
+            merge_lora=merge_lora,             # ΔW only; True ⇒ W + ΔW
+        )
+        for merge_lora in [True, False]
+    ]
+
     # gradnorm_cb = PartialGradNormCallback(
     #     model,
     #     target_modules=["lm_head"],  # LoRA‑style patterns
@@ -96,7 +112,7 @@ def main(cfg: DictConfig):
         args=train_args,
         data_collator=data_collator,
         train_dataset=tokenized_dataset,
-        # callbacks=[gradnorm_cb]
+        callbacks=callbacks
     )
 
     trainer.train()

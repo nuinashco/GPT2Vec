@@ -18,8 +18,9 @@ class AttentionGeometryCallback(WandbCallback):
         k_path: str,
         layers: Iterable[int] | int | None = None,
         is_lora: bool = False,
-        merge_lora: bool = True,
+        merge_lora: bool = False,
         adapter_name: str | None = None,
+        is_quantized: bool = False,
         attention_type: str | None = None,
     ):
         super().__init__()
@@ -32,6 +33,7 @@ class AttentionGeometryCallback(WandbCallback):
             is_lora=is_lora,
             merge_lora=merge_lora,
             adapter_name=adapter_name,
+            is_quantized=is_quantized,
         )
 
 

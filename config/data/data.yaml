@@ -4,7 +4,7 @@ dataset:
   split: train
 
 sample:
-  num_samples: 10000
+  num_samples: 70000
   seed: ${seed}
 
 tokenize:

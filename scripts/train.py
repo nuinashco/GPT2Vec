@@ -109,6 +109,7 @@ def main(cfg: DictConfig):
         **cfg.wandb,
         config={'hydra': OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)}
     )
+    wandb.define_metric("*", summary="none") 
 
     trainer = Trainer(
         model=model,

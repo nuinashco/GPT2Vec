@@ -1,6 +1,6 @@
 hydra:
   run:
-    dir: "../hydra_logs"
+    dir: "hydra_logs"
   output_subdir: ${now:%Y-%m-%d_%H-%M-%S}
 
 defaults:

@@ -72,4 +72,4 @@ class AttentionGeometryCallback(WandbCallback):
         tmp_logs[f"{name}/avg_symmetry"] = np.array(sym).mean()
         tmp_logs[f"{name}/avg_directionality"] = np.array(sym).mean()
 
-        self._wandb.log(tmp_logs)
+        self._wandb.log(tmp_logs, step=state.global_step)

@@ -1,6 +1,6 @@
 dataset:
   path: wikimedia/wikipedia
-  name: 20231101.uk
+  name: 20231101.en
   split: train
 
 sample:

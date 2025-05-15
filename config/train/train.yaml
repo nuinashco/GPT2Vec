@@ -14,7 +14,7 @@ training_args:
     gradient_accumulation_steps: 2
     do_train: True
     do_eval: False
-    bf16: False
+    bf16: True
     report_to: wandb
     optim: adamw_8bit
     save_strategy: steps

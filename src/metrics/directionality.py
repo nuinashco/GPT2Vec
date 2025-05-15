@@ -1,6 +1,9 @@
 import torch
 import functools
 
+import bitsandbytes as bnb
+from bitsandbytes.functional import dequantize_4bit
+
 from abc import ABC, abstractmethod
 from typing import Literal, Dict, Any, Optional, List, Iterable
 
@@ -19,9 +22,12 @@ class AttentionExtractor:
         q_path: str,
         k_path: str,
         attention_type: Optional[Literal["grouped"]] = None,
+
         is_lora: bool = False,
         merge_lora: bool = False,
         adapter_name: Optional[str] = None,
+
+        is_quantized: bool = False,
     ):
         self.model = model
         self.q_path, self.k_path = q_path, k_path
@@ -31,6 +37,8 @@ class AttentionExtractor:
         self.merge_lora = merge_lora
         self.adapter_name = adapter_name  # default: merge *all* loaded adapters
 
+        self.is_quantized = is_quantized
+
         self.layer_count = model.config.num_hidden_layers
         self.d  = model.config.hidden_size
         self.dh = self.d // model.config.num_attention_heads
@@ -38,6 +46,27 @@ class AttentionExtractor:
     # def layer_count(self) -> int:
     #     prefix, _ = self.q_path.split("[layer_idx].")
     #     return len(rgetattr(self.model, prefix))
+
+
+    def _get_weight(self, lin: torch.nn.Linear | bnb.nn.Linear4bit) -> torch.Tensor:
+        """
+        Get the weights of a linear layer, handling quantization if necessary.
+        """
+        if self.is_quantized:
+            assert isinstance(lin, bnb.nn.Linear4bit), \
+                f"Expected Linear4bit, got {type(lin)}"
+
+            packed = lin.weight.data
+            qs = lin.weight.quant_state
+            weight = dequantize_4bit(packed, qs)
+
+        else:
+            assert isinstance(lin, torch.nn.Linear), \
+                f"Expected Linear, got {type(lin)}"
+
+            weight = lin.weight
+
+        return weight
 
 
     def matrix(self, layer_idx: int) -> torch.Tensor:
@@ -69,13 +98,13 @@ class AttentionExtractor:
             assert not self._is_lora_layer(proj_module), \
                 f"Module {proj_module} is a LoRA layer, but is_lora is False."
 
-            return proj_module.weight
+            return self._get_weight(proj_module)
 
         else:
             delta_lora = self._delta_lora_weight(proj_module)
 
             if self.merge_lora:
-                return proj_module.base_layer.weight + delta_lora
+                return self._get_weight(proj_module.base_layer) + delta_lora
             else:
                 return delta_lora
 
@@ -90,10 +119,10 @@ class AttentionExtractor:
 
 
     def _delta_lora_weight(self, module) -> torch.Tensor:
-        if not self._is_lora_layer(module):
-            return torch.zeros_like(module.base_layer.weight)
+        delta = torch.zeros_like(self._get_weight(module.base_layer))
 
-        delta = torch.zeros_like(module.base_layer.weight)
+        if not self._is_lora_layer(module):
+            return delta
 
         adapters = (
             [self.adapter_name] if self.adapter_name is not None

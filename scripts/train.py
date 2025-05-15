@@ -50,6 +50,9 @@ def main(cfg: DictConfig):
         quantization_config=quant_config,
     )
 
+    if quant_config:
+        model = prepare_model_for_kbit_training(model)
+
     if hasattr(cfg.model, "lora"):
         lora_cfg = OmegaConf.to_container(cfg.model.lora, resolve=True)
         lora_config = LoraConfig(**lora_cfg)

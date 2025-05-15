@@ -1,6 +1,5 @@
 # git
-# git clone https://nuinashco:$GITHUB_TOKEN@github.com/nuinashco/GPT2Vec.git
-# cd GPT2Vec
+# git clone https://nuinashco:$GITHUB_TOKEN@github.com/nuinashco/GPT2Vec.git $$ cd GPT2Vec $$ source setup_vast.sh
 
 git config --global user.name "Ivan Havlytskyi"
 git config --global user.email "ivan.havlytskyi@gmail.com"

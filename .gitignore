@@ -9,4 +9,5 @@ checkpoints/
 hydra_logs/
 
 data/ner-uk-2/
+pretrained_models/
 !config/data/

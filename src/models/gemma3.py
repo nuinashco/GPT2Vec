@@ -44,7 +44,7 @@ class biGemma3Attention(Gemma3Attention):
 
 class biGemma3DecoderLayer(Gemma3DecoderLayer):
     def __init__(self, config: Gemma3TextConfig, layer_idx: int):
-        nn.Module().__init__()
+        nn.Module.__init__(self)
         self.config = config
         self.hidden_size = config.hidden_size
         self.layer_idx = layer_idx
@@ -62,7 +62,7 @@ class biGemma3DecoderLayer(Gemma3DecoderLayer):
 
 class biGemma3TextModel(Gemma3TextModel):
     def __init__(self, config: Gemma3TextConfig):
-        Gemma3PreTrainedModel().__init__(config)
+        Gemma3PreTrainedModel.__init__(self, config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
@@ -185,7 +185,8 @@ class biGemma3TextModel(Gemma3TextModel):
 
 
 # initialized with a random head
-class biLlamaForMaskedLM(Gemma3PreTrainedModel):
+class biGemma3ForMaskedLM(Gemma3PreTrainedModel):
+    config_class = Gemma3TextConfig
     base_model_prefix = "language_model"
 
     def __init__(self, config):
@@ -196,6 +197,24 @@ class biLlamaForMaskedLM(Gemma3PreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        self.lm_head = new_embeddings
+
+    def set_decoder(self, decoder):
+        self.model = decoder
+
+    def get_decoder(self):
+        return self.model
 
     def forward(
         self,
@@ -250,9 +269,9 @@ class biLlamaForMaskedLM(Gemma3PreTrainedModel):
 
 
 # with trained head
-class biLlamaForMaskedLM(Gemma3ForCausalLM):
+class biGemma3ForMaskedNTP(Gemma3ForCausalLM):
     def __init__(self, config):
-        Gemma3PreTrainedModel().__init__(config)
+        Gemma3PreTrainedModel.__init__(self, config)
         self.model = biGemma3TextModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -312,7 +331,8 @@ class biLlamaForMaskedLM(Gemma3ForCausalLM):
         )
 
 
-class LlamaForTokenClassification(Gemma3PreTrainedModel):
+class biGemma3ForTokenClassification(Gemma3PreTrainedModel):
+    config_class = Gemma3TextConfig
     base_model_prefix = "language_model"
 
     def __init__(self, config: Gemma3TextConfig):

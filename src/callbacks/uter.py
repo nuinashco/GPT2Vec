@@ -1,61 +1,51 @@
 import torch
-from typing import Tuple, List, Dict, Any
 from transformers import TrainerCallback, TrainingArguments, TrainerState, TrainerControl
-
-
-def uter_per_layer(
-        attentions: Tuple[torch.Tensor, ...],
-        attn_mask: torch.Tensor
-) -> List[float]:
-    mask_q = attn_mask.unsqueeze(1).unsqueeze(-1)
-    mask_k = attn_mask.unsqueeze(1).unsqueeze(-2)
-    valid  = (mask_q & mask_k).to(attentions[0].dtype)
-
-    eps, uters = 1e-9, []
-    for A in attentions:
-        tri_u = torch.triu(A, diagonal=1)
-        tri_valid = torch.triu(valid, diagonal=1)
-
-        num   = ((tri_u * tri_valid) ** 2).sum(dim=(-1, -2))
-        denom = ((A * valid) ** 2).sum(dim=(-1, -2))
-        uters.append((num / (denom + eps)).mean().item())
-    return uters
-
+from typing import Dict, Any
+from src.metrics.uter import UTERScore
 
 
 class UTERCallback(TrainerCallback):
     def __init__(self, device: str | None = None):
         self.device = device
-
+        self.metric = UTERScore()
 
     def on_train_batch_end(
         self,
         args: TrainingArguments,
         state: TrainerState,
         control: TrainerControl,
-        model,
-        **kwargs: Dict[str, Any],
+        **kwargs: Dict[str, Any]
     ):
-        if not control.should_log:
-            return
-
         inputs = kwargs["inputs"]
-        device = self.device or next(model.parameters()).device
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        outputs = kwargs["outputs"]
+        model = kwargs["model"]
+        device  = self.device or next(model.parameters()).device
 
-        if (isinstance(kwargs["outputs"], dict)
-           and "attentions" in kwargs["outputs"]):
-            attentions = kwargs["outputs"]["attentions"]
+        if isinstance(outputs, dict) and "attentions" in outputs:
+            attentions = outputs["attentions"]
         else:
+            # run a quick no-grad forward pass to obtain attentions
             with torch.no_grad():
-                outs = model(**inputs,
-                             output_attentions=True,
-                             return_dict=True)
-            attentions = outs.attentions
+                re_out = model(**{k: v.to(device) for k, v in inputs.items()},
+                               output_attentions=True,
+                               return_dict=True)
+            attentions = re_out.attentions
 
-        uters = uter_per_layer(attentions, inputs["attention_mask"])
+        attn_mask = inputs["attention_mask"].to(device)
+        self.metric.add_batch(attentions, attn_mask)
 
-        logs = {f"uter/L{i}": v for i, v in enumerate(uters)}
-        logs["uter/mean"] = sum(uters) / len(uters)
-        
-        self.log(logs)
+
+    def on_step_end(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs
+    ):
+        layer_means = self.metric.compute()
+        if layer_means:
+            logs = {f"uter/L{i}": v for i, v in enumerate(layer_means)}
+            logs["uter/mean"] = sum(layer_means) / len(layer_means)
+            self.log(logs)
+
+        self.metric.reset()

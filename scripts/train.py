@@ -84,27 +84,6 @@ def main(cfg: DictConfig):
         tokenizer=tokenizer, mlm=True, mlm_probability=0.2
     )
 
-
-    # TODO: CALLBACKS
-
-    callbacks = [
-        AttentionGeometryCallback(
-            q_path="base_model.model.model.layers[layer_idx].self_attn.q_proj",
-            k_path="base_model.model.model.layers[layer_idx].self_attn.k_proj",
-            attention_type="grouped",     # or None
-            is_lora=True,                 # if using PEFT
-            merge_lora=merge_lora,             # ΔW only; True ⇒ W + ΔW
-        )
-        for merge_lora in [True, False]
-    ]
-
-    # gradnorm_cb = PartialGradNormCallback(
-    #     model,
-    #     target_modules=["lm_head"],  # LoRA‑style patterns
-    #     # target_layers=range(0, 6),              # layers 0‑5 inclusive
-    #     log_key="=grad_norm",
-    # )
-
     wandb_run = wandb.init(
         **cfg.wandb,
         config={'hydra': OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)}
@@ -116,7 +95,7 @@ def main(cfg: DictConfig):
         args=train_args,
         data_collator=data_collator,
         train_dataset=tokenized_dataset,
-        callbacks=callbacks
+        # callbacks=callbacks
     )
 
     trainer.train()

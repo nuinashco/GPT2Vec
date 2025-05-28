@@ -10,8 +10,8 @@ training_args:
     lr_scheduler_type: cosine
     warmup_ratio: 0.0
     max_steps: 2000
-    per_device_train_batch_size: 16
-    gradient_accumulation_steps: 2
+    per_device_train_batch_size: 8
+    gradient_accumulation_steps: 4
     do_train: True
     do_eval: False
     bf16: True
